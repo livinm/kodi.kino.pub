@@ -107,6 +107,8 @@ def show_items(items, options={}):
         isdir = True if item['type'] in ['serial', 'docuserial', 'tvshow'] else False
         link = get_internal_link('view', {'id': item['id']})
         li = xbmcgui.ListItem(item['title'].encode('utf-8'))
+        import_url = get_internal_link('comments', {'id': item['id']})
+        li.addContextMenuItems([('Комментарии Кинопаб', 'XBMC.RunPlugin(%s)' % import_url,),])
         if 'enumerate' in options:
             li.setLabel("%s. %s" % (index+1, li.getLabel()))
         li.setInfo('Video', addonutils.video_info(item, {'trailer': trailer_link(item)}))
@@ -578,3 +580,19 @@ def actionAlphabet(qp):
             xbmcplugin.addDirectoryItem(handle, link, li, True)
     xbmcplugin.endOfDirectory(handle)
 
+    def actionComments(qp):
+    response = api('items/comments?id=%s'% qp['id'])
+    if response['status'] == 200:  
+        comments = response['comments']
+        message = '' if response['comments'] else u'Пока тут пусто'
+        for i in comments:
+            if int(i['rating']) > 0:
+                rating = ' [COLOR FF00B159](+%s)[/COLOR]' % i['rating']
+            elif int(i['rating']) < 0:
+                rating = ' [COLOR FFD11141](%s)[/COLOR]' % i['rating']
+            else:
+                rating = ''
+            message = '%s[COLOR FFFFF000]%s[/COLOR]%s: %s\n\n' % (message,i['user']['name'],rating, i['message'].replace('\n', ' '))
+        wheader = 'Комментарии "%s"' % response['item']['title'].encode('utf-8')
+        dialog = xbmcgui.Dialog()
+        dialog.textviewer(wheader, '%s' % message) 
