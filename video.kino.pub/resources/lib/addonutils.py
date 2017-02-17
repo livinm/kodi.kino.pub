@@ -57,7 +57,11 @@ def get_mlink(video, stream_type=None, quality=None, ask_quality="false"):
 def video_info(item, extend=None):
 
     def get_plot():
-        plot_1 = item["plot"]
+        plot_1 = re.sub(
+            "<[^<]+?>",
+            "",
+            item["plot"].replace("&#151;", "—").replace("&#133;", "...")
+        )
         if item["kinopoisk_rating"]:
             plot_2 = u"Кинопоиск: {}".format(str(round(item["kinopoisk_rating"], 1)))
         else:
