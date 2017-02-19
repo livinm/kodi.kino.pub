@@ -107,6 +107,9 @@ def show_items(items, options={}):
         isdir = True if item['type'] in ['serial', 'docuserial', 'tvshow'] else False
         link = get_internal_link('view', {'id': item['id']})
         li = xbmcgui.ListItem(item['title'].encode('utf-8'))
+        comment_url = get_internal_link('comments', {'id': item['id']})
+        similar_url = get_internal_link('similar', {'id': item['id']}) 
+        li.addContextMenuItems([('Комментарии Кинопаб', 'XBMC.RunPlugin(%s)' % comment_url,),('Похожие фильмы', 'Container.Update(%s)' % similar_url,),])				
         if 'enumerate' in options:
             li.setLabel("%s. %s" % (index+1, li.getLabel()))
         li.setInfo('Video', addonutils.video_info(item, {'trailer': trailer_link(item)}))
@@ -577,4 +580,30 @@ def actionAlphabet(qp):
             link = get_internal_link('items', addonutils.dict_merge(qp, {'letter': letter}))
             xbmcplugin.addDirectoryItem(handle, link, li, True)
     xbmcplugin.endOfDirectory(handle)
-
+def actionComments(qp):
+    response = api('items/comments', qp)
+    if response['status'] == 200:  
+        comments = response['comments']
+        message = '' if response['comments'] else u'Пока тут пусто'
+        for i in comments:
+            if int(i['rating']) > 0:
+                rating = ' [COLOR FF00B159](+%s)[/COLOR]' % i['rating']
+            elif int(i['rating']) < 0:
+                rating = ' [COLOR FFD11141](%s)[/COLOR]' % i['rating']
+            else:
+                rating = ''
+            message = '%s[COLOR FFFFF000]%s[/COLOR]%s: %s\n\n' % (message,i['user']['name'],rating, i['message'].replace('\n', ' '))
+        dialog = xbmcgui.Dialog()
+        dialog.textviewer('Комментарии "%s"' % response['item']['title'].encode('utf-8'), '%s' % message) 
+def actionSimilar(qp):
+    response = api('items/similar', qp)
+    if response['status'] == 200:
+        if len(response['items']) == 0:
+            dialog = xbmcgui.Dialog()
+            dialog.ok(u'Похожие фильмы', u'Пока тут пусто')
+        else:
+            add_default_headings(qp, "s")
+            show_items(response['items'])
+            xbmcplugin.endOfDirectory(handle)
+    else:
+        notice(response['message'], response['name'])
